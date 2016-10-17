@@ -9,18 +9,14 @@ var mouseX = 0;
 var mouseY = 0;
 //var sound_effect;
 //var sound_effect2;
-var path = "images/bg/";
+
 var format = '.jpg';
 //var projector, mouse = new THREE.Vector2(), closestIntersection;
 //var raycaster;
-var urls = [
-	path + 'posx' + format, path + 'negx' + format,
-	path + 'posy' + format, path + 'negy' + format,
-	path + 'posz' + format, path + 'negz' + format
-];
-var loader = new THREE.CubeTextureLoader();
-var skybox = loader.load(urls);
 
+//var loader = new THREE.CubeTextureLoader();
+//var skybox = loader.load(urls);
+var texture, skybox;
 
 	if ( ! Detector.webgl ) {
 		Detector.addGetWebGLMessage();
@@ -66,7 +62,7 @@ var skybox = loader.load(urls);
 
 		scene.add( new THREE.AmbientLight( 0x444444 ) );
 		var light = new THREE.DirectionalLight( 0xffffbb, 1 );
-		light.position.set( - 1, 1, - 1 );
+		light.position.set( -1, 1, -1 );
 		scene.add( light );
 
 		waterNormals = new THREE.TextureLoader().load( 'textures/waternormals.jpg' );
@@ -91,39 +87,42 @@ var skybox = loader.load(urls);
 		mirrorMesh.rotation.x = - Math.PI * 0.5;
 		scene.add( mirrorMesh );
 
-		// load skybox
-		var cubeMap = new THREE.CubeTexture( [] );
-		cubeMap.format = THREE.RGBFormat;
-		var loader = new THREE.ImageLoader();
-
-
-		scene.addEventListener('ready', function() {
-			//scene.setGravity(new THREE.Vector3(0,0,0));
-			sceneCube = new THREE.Scene; // change to Physijs if applicable
-			var geometry = new THREE.SphereBufferGeometry( 100, 32, 16 );
-			var path = "images/";
-			var format = '.jpg';
-
-			// SKYBOX
-			skybox.format = THREE.RGBFormat;
-			var shader = THREE.ShaderLib[ "cube" ];
-			shader.uniforms[ "tCube" ].value = skybox;
-			var material = THREE.createMaterial( // change to Physijs
-				new THREE.ShaderMaterial( {
-					fragmentShader: shader.fragmentShader,
-					vertexShader: shader.vertexShader,
-					uniforms: shader.uniforms,
+				var cubeMap = new THREE.CubeTexture( [] );
+				cubeMap.format = THREE.RGBFormat;
+				var loader = new THREE.ImageLoader();
+				loader.load( 'textures/skyboxsun25degtest.png', function ( image ) {
+					var getSide = function ( x, y ) {
+						var size = 1024;
+						var canvas = document.createElement( 'canvas' );
+						canvas.width = size;
+						canvas.height = size;
+						var context = canvas.getContext( '2d' );
+						context.drawImage( image, - x * size, - y * size );
+						return canvas;
+					};
+					cubeMap.images[ 0 ] = getSide( 2, 1 ); // px
+					cubeMap.images[ 1 ] = getSide( 0, 1 ); // nx
+					cubeMap.images[ 2 ] = getSide( 1, 0 ); // py
+					cubeMap.images[ 3 ] = getSide( 1, 2 ); // ny
+					cubeMap.images[ 4 ] = getSide( 1, 1 ); // pz
+					cubeMap.images[ 5 ] = getSide( 3, 1 ); // nz
+					cubeMap.needsUpdate = true;
+				} );
+				var cubeShader = THREE.ShaderLib[ 'cube' ];
+				cubeShader.uniforms[ 'tCube' ].value = cubeMap;
+				var skyBoxMaterial = new THREE.ShaderMaterial( {
+					fragmentShader: cubeShader.fragmentShader,
+					vertexShader: cubeShader.vertexShader,
+					uniforms: cubeShader.uniforms,
+					depthWrite: false,
 					side: THREE.BackSide
-				} )
-			);
-			var mesh = new THREE.Mesh( // change to Physijs.BoxMesh
-			  new THREE.BoxGeometry( 100000, 100000, 100000 ), material );
-			mesh.__dirtyPosition = true;
-			sceneCube.add( mesh );
+				} );
+				var skyBox = new THREE.Mesh(
+					new THREE.BoxGeometry( 1000000, 1000000, 1000000 ),
+					skyBoxMaterial
+				);
+				scene.add( skyBox );
 
-
-
-		});
 
 		var shader = THREE.FresnelShader;
 		var uniforms = THREE.UniformsUtils.clone( shader.uniforms );
